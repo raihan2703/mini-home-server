@@ -284,8 +284,8 @@ Router ZTE F460 difungsikan sebagai modem panggil PPPoE dan gateway jaringan uta
 * **Connection Type:** `PPPoE`
 * **Service List / Template:** `TR069_INTERNET_R_VID`
 * **Port Binding:** Centang **seluruh port LAN** dan **SSID 1**
-* **Username PPPoE:** `anisryan@ak.net`
-* **Password PPPoE:** `5758`
+* **Username PPPoE:** `[enter your user PPPoE that given by ISP]`
+* **Password PPPoE:** `[enter the pass base on user PPPoE]`
 * **Option:** Beri tanda centang pada opsi **`Enable Passthrough`**
 
 #### B. Konfigurasi SSID 1 (Recovery Access)
