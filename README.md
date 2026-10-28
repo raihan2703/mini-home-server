@@ -1,30 +1,47 @@
-# 🏠 Mini Home Server — STB Amlogic S905X
+# 🏠 Mini Home Server & Network Infrastructure — STB Amlogic S905X
 
 [![Armbian](https://img.shields.io/badge/OS-Armbian%20Linux-red?logo=armbian&logoColor=white)](https://www.armbian.com/)
 [![SoC](https://img.shields.io/badge/SoC-Amlogic%20S905X-blue)]()
 [![Docker](https://img.shields.io/badge/Docker-Engine%20%26%20Compose-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+[![MikroTik](https://img.shields.io/badge/Router-MikroTik%20RB941--2nD-black?logo=mikrotik&logoColor=white)](https://mikrotik.com/)
 [![Storage](https://img.shields.io/badge/Storage-eMMC%20%2B%20SanDisk%2032GB-green)]()
 
-Repositori ini berisi dokumentasi lengkap, panduan setup, dan konfigurasi `docker-compose.yml` untuk membangun **Mini Home Server** berdaya rendah menggunakan perangkat STB Android TV berbasis chip **Amlogic S905X** yang telah di-flash dengan sistem operasi **Armbian Linux**.
+Dokumentasi komprehensif rancang bangun infrastruktur jaringan rumah dan mini home server hemat daya berbasis **STB Android TV (Amlogic S905X)** dengan sistem operasi **Armbian Linux**, terintegrasi bersama **Modem ISP ZTE F460** dan router **MikroTik RB941-2nD (hAP lite TC)**.
 
 ---
 
-## 📋 Latar Belakang & Spesifikasi Sistem
+## 📑 Daftar Isi
+1. [Bagian 1: Setup Home Server (Armbian, Docker & Immich)](#-bagian-1-setup-home-server-armbian-docker--immich)
+   * [1.1 Spesifikasi Sistem](#11-spesifikasi-sistem)
+   * [1.2 Instalasi Docker & Compose](#12-instalasi-docker--docker-compose)
+   * [1.3 Setup Direktori Server](#13-menyiapkan-folder-server--docker-composeyml)
+   * [1.4 Mitigasi Storage & Flashdisk SanDisk 32GB](#14-mitigasi-masalah-storage-pemindahan-docker--immich-ke-flashdisk-sandisk-32gb)
+   * [1.5 Anatomi Folder Storage Immich](#15-anatomi-struktur-folder-storage-immich-di-flashdisk)
+   * [1.6 Monitoring & Maintenance](#16-pemantauan-sistem--maintenance-rutin)
+2. [Bagian 2: Topologi Jaringan & Konfigurasi Perangkat](#-bagian-2-topologi-fisik--konfigurasi-jaringan)
+   * [2.1 Diagram Topologi Fisik](#21-diagram-topologi-fisik)
+   * [2.2 Konfigurasi Router ISP (ZTE F460)](#22-konfigurasi-router-isp-zte-f460)
+   * [2.3 Konfigurasi MikroTik RB941-2nD-TC](#23-konfigurasi-mikrotik-rb941-2nd-tc-hap-lite)
+   * [2.4 Konfigurasi IP Statis STB Server](#24-konfigurasi-ip-statis-stb-server)
+   * [2.5 Tabel Alokasi IP Address](#25-tabel-alokasi-ip-address)
 
-* **Perangkat:** STB Android TV (Amlogic S905X, RAM 1GB / 2GB)
+---
+
+# 🚀 Bagian 1: Setup Home Server (Armbian, Docker & Immich)
+
+---
+
+### 1.1 Spesifikasi Sistem
+* **Hardware:** STB Android TV (Amlogic S905X, RAM 1GB / 2GB)
 * **Sistem Operasi:** Armbian Linux (Debian / Ubuntu aarch64)
-* **Akses Terminal:** SSH sebagai pengguna `root`
-* **Kondisi Storage Internal:** eMMC internal bawaan sangat terbatas (hanya tersisa sekitar `< 5 - 6 GB` yang dapat digunakan)
-* **Storage Eksternal:** Flashdisk SanDisk 32GB via USB (mount point: `/mnt/sandisk32G`, filesystem: `ext4`)
-* **Tantangan Utama:** Service seperti **Immich** memerlukan penyimpanan besar untuk backup foto/video, sementara Docker secara default menyimpan semua images, container layers, dan volume di internal storage (`/var/lib/docker`). Dokumen ini mencakup mitigasi lengkap untuk memindahkan penyimpanan Docker dan data backup Immich ke media eksternal SanDisk 32GB.
+* **Akses Terminal:** SSH sebagai user `root`
+* **Internal Storage:** eMMC internal bawaan (< 5 - 6 GB usable)
+* **External Storage:** Flashdisk SanDisk 32GB via USB (mount point: `/mnt/sandisk32G`, filesystem: `ext4`)
+* **Tantangan Utama:** Service **Immich** membutuhkan ruang besar untuk backup foto/video, sementara Docker secara default menyimpan seluruh file di `/var/lib/docker` internal.
 
 ---
 
-## 🛠️ Panduan Langkah Demi Langkah
-
----
-
-### Langkah 1: Instalasi Docker & Docker Compose
+### 1.2 Instalasi Docker & Docker Compose
 
 Masuk ke terminal STB via SSH sebagai user `root`, lalu jalankan baris perintah berikut secara berurutan:
 
@@ -49,7 +66,7 @@ docker --version && docker compose version
 
 ---
 
-### Langkah 2: Menyiapkan Folder Server & `docker-compose.yml`
+### 1.3 Menyiapkan Folder Server & `docker-compose.yml`
 
 Seluruh file konfigurasi layanan diatur di dalam direktori kerja `/root/server`:
 
@@ -63,42 +80,23 @@ cd /root/server
 
 **Menyiapkan file `docker-compose.yml`:**
 1. Jika kamu meng-clone repository ini ke STB, file `docker-compose.yml` sudah otomatis tersedia di dalam folder.
-2. Jika kamu setup manual atau mengunggah file baru, buat file tersebut menggunakan editor nano:
+2. Jika setup manual, buat file tersebut menggunakan editor nano:
    ```bash
    nano docker-compose.yml
    ```
    *(Tempelkan skrip konfigurasi compose, lalu simpan dengan menekan `Ctrl + O`, `Enter`, dan keluar dengan `Ctrl + X`)*.
 
----
-
-### Langkah 3: Menjalankan Container
-
-Setelah file `docker-compose.yml` tersedia di direktori `/root/server`, jalankan seluruh service di latar belakang (detached mode):
-
+Jalankan container:
 ```bash
 docker compose up -d
-```
-
-Periksa apakah seluruh container berjalan dengan normal:
-```bash
 docker compose ps
 ```
 
 ---
 
-## 🚨 Mitigasi Masalah Storage: Pemindahan Docker & Immich ke Flashdisk SanDisk 32GB
+### 1.4 Mitigasi Masalah Storage: Pemindahan Docker & Immich ke Flashdisk SanDisk 32GB
 
-### Masalah yang Dihadapi:
-Saat server pertama kali dipasang, Docker berjalan normal (*healthy*) langsung di storage internal eMMC tanpa ada storage tambahan yang tertancap. Namun, ketika menjalankan service berat seperti **Immich**, kapasitas eMMC internal (< 5-6 GB) akan langsung penuh karena:
-1. Docker menyimpan image layers dan cache di `/var/lib/docker`.
-2. Immich menyimpan seluruh file hasil backup galeri foto/video handphone beserta thumbnail dan transcode-nya.
-
-### Solusi:
-Memindahkan direktori kerja Docker (`data-root`) beserta folder library upload Immich ke Flashdisk SanDisk 32GB (`/mnt/sandisk32G`).
-
----
-
-### Bagian A: Persiapan & Mounting Flashdisk SanDisk 32GB Otomatis
+#### Bagian A: Persiapan & Mounting Flashdisk SanDisk 32GB Otomatis
 
 Tancapkan Flashdisk SanDisk 32GB ke port USB STB, lalu jalankan langkah-langkah berikut:
 
@@ -141,9 +139,7 @@ Tancapkan Flashdisk SanDisk 32GB ke port USB STB, lalu jalankan langkah-langkah 
 
 ---
 
-### Bagian B: Migrasi Data Docker yang Sedang Berjalan ke Flashdisk
-
-Lakukan pemindahan data Docker yang sebelumnya aktif di internal ke flashdisk:
+#### Bagian B: Migrasi Data Docker yang Sedang Berjalan ke Flashdisk
 
 1. **Hentikan service Docker:**
    ```bash
@@ -164,7 +160,6 @@ Lakukan pemindahan data Docker yang sebelumnya aktif di internal ke flashdisk:
    > Perintah ini digunakan untuk mengubah nama folder Docker lama menjadi file cadangan sementara guna memastikan data asli aman sebelum dihapus permanen.
 
 4. **Arahkan `data-root` Docker ke flashdisk:**
-   Jalankan perintah ini untuk membuat konfigurasi `/etc/docker/daemon.json`:
    ```bash
    cat <<EOF > /etc/docker/daemon.json
    {
@@ -194,36 +189,32 @@ Lakukan pemindahan data Docker yang sebelumnya aktif di internal ke flashdisk:
 
 ---
 
-### Bagian C: Konfigurasi Penyimpanan Immich & Struktur Folder
-
-Agar file backup foto Immich tersimpan langsung di flashdisk, pastikan file konfigurasi `.env` di direktori `/root/server` sudah sesuai:
+#### Bagian C: Konfigurasi Penyimpanan Immich
 
 1. **Verifikasi nilai `UPLOAD_LOCATION` pada file `.env`:**
    ```bash
    cat /root/server/.env | grep UPLOAD_LOCATION
    ```
-   > Perintah ini digunakan untuk memastikan variabel path upload mengarah ke flashdisk dengan output:
+   > Output yang wajib muncul:
    ```env
    UPLOAD_LOCATION=/mnt/sandisk32G/immich-app/library
    ```
 
-2. **Buat direktori library tersebut jika belum ada:**
+2. **Buat direktori target di flashdisk jika belum ada:**
    ```bash
    mkdir -p /mnt/sandisk32G/immich-app/library
    ```
-   > Perintah ini digunakan untuk menyiapkan folder target di flashdisk sebelum container Immich dinyalakan.
 
-3. **Jalankan kembali Docker Compose:**
+3. **Jalankan kembali service:**
    ```bash
    cd /root/server && docker compose up -d
    ```
-   > Perintah ini digunakan untuk menerapkan konfigurasi penyimpanan baru dan menyalakan kembali seluruh container Immich.
 
 ---
 
-### 📂 Anatomi Struktur Folder Storage Immich di Flashdisk
+### 1.5 Anatomi Struktur Folder Storage Immich di Flashdisk
 
-Setelah container Immich berjalan dengan path `/mnt/sandisk32G/immich-app/library`, sistem secara otomatis menyusun direktori penyimpanan media sebagai berikut:
+Setelah Immich berjalan, struktur folder otomatis tersusun di dalam `/mnt/sandisk32G/immich-app/library`:
 
 ```text
 /mnt/sandisk32G/immich-app/library
@@ -233,33 +224,182 @@ Setelah container Immich berjalan dengan path `/mnt/sandisk32G/immich-app/librar
 │           └── 2026-08-07/
 │               └── IMG_0001.jpg
 ├── upload/         (Folder temporary / bilik upload user saat transfer data berlangsung)
-├── thumbs/         (Thumbnail resolusi kecil untuk mempercepat loading foto di aplikasi)
-└── profile/        (Foto avatar/profil pengguna Immich)
+├── thumbs/         (Thumbnail foto/video untuk performa cepat pada aplikasi)
+└── profile/        (Foto profil pengguna)
 ```
 
-**Penjelasan Alur Penyimpanan:**
-* **`library/`**: Lokasi penyimpanan permanen file foto/video yang telah berhasil diindeks, terkelompokkan secara terstruktur berdasarkan ID Pengguna (`<user-id>`), Tahun, dan Tanggal pengambilan media.
-* **`upload/`**: Direktori penampung sementara (*staging area/bilik transfer*) saat handphone sedang mengunggah file foto sebelum diproses dan dipindahkan ke `library/`.
-* **`thumbs/`**: Menyimpan thumbnail hasil kompresi agar aplikasi mobile Immich dapat membuka galeri dengan cepat dan hemat bandwidth/RAM STB.
-* **`profile/`**: Menyimpan foto profil masing-masing akun pengguna yang terdaftar di Immich server.
+* **`library/`**: Penyimpanan permanen foto/video yang tersusun terstruktur per `<user-id>`, Tahun, dan Tanggal.
+* **`upload/`**: Bilik transit sementara saat perangkat handphone mengunggah foto sebelum diverifikasi.
+* **`thumbs/`**: Menyimpan cache thumbnail resolusi rendah untuk efisiensi RAM STB & loading galeri.
+* **`profile/`**: Foto profil tiap akun pengguna Immich.
 
 ---
 
-## 📊 Pemantauan Sistem & Maintenance Rutin
+### 1.6 Pemantauan Sistem & Maintenance Rutin
 
-Gunakan beberapa command di bawah ini untuk memantau performa mini server:
+```bash
+# Cek sisa storage eMMC & Flashdisk
+df -h
 
-* **Melihat sisa kapasitas storage eMMC dan Flashdisk SanDisk:**
-  ```bash
-  df -h
-  ```
-* **Melihat penggunaan RAM, CPU, dan resource per kontainer:**
-  ```bash
-  docker stats
-  ```
-* **Melihat beban kerja sistem dan suhu STB:**
-  ```bash
-  htop
-  # atau cek suhu SoC langsung:
-  armbianmonitor -m
-  ```
+# Cek penggunaan resource per container
+docker stats
+
+# Cek suhu SoC & CPU STB
+armbianmonitor -m
+```
+
+---
+
+# 🌐 Bagian 2: Topologi Fisik & Konfigurasi Jaringan
+
+---
+
+### 2.1 Diagram Topologi Fisik
+
+```mermaid
+flowchart TD
+    ISP([🌐 Internet / Fiber Optic]) -->|Kabel Fiber| F460["ZTE F460 (192.168.1.1)<br>Mode: PPPoE Client + Passthrough"]
+    
+    subgraph ZTE_F460 ["ZTE F460 Config"]
+        F460 -.->|SSID 1: 'Admin'| W_ADM["📶 Wi-Fi Recovery Mode"]
+    end
+
+    F460 -->|Kabel UTP: LAN 1 ke Ether 1| MIKROTIK["MikroTik RB941-2nD (192.168.1.2)<br>Mode: Transparent Bridge-Shaper"]
+
+    subgraph MIKROTIK_PORTS ["MikroTik RB941-2nD-TC"]
+        MIKROTIK -->|wlan1: 'WiFi-MikroTik'| CLIENTS["📱 Client Wi-Fi<br>(Laptop: .200, HP: .201)"]
+        MIKROTIK -->|Ether 3 / Ether 4| LAN_CLIENTS["💻 Client LAN Lainnya"]
+        MIKROTIK -->|Kabel UTP: Ether 2| STB["📺 STB S905X Server<br>(IP Statis: 192.168.1.100)"]
+    end
+```
+
+---
+
+### 2.2 Konfigurasi Router ISP (ZTE F460)
+
+Router ZTE F460 difungsikan sebagai modem panggil PPPoE dan gateway jaringan utama (`192.168.1.1`).
+
+#### A. Konfigurasi WAN (PPPoE & Passthrough)
+* **IP Mode:** `IPv4`
+* **Connection Type:** `PPPoE`
+* **Service List / Template:** `TR069_INTERNET_R_VID`
+* **Port Binding:** Centang **seluruh port LAN** dan **SSID 1**
+* **Username PPPoE:** `anisryan@ak.net`
+* **Password PPPoE:** `5758`
+* **Option:** Beri tanda centang pada opsi **`Enable Passthrough`**
+
+#### B. Konfigurasi SSID 1 (Recovery Access)
+SSID ini difungsikan khusus sebagai jalur darurat nirkabel untuk mengakses WebGUI ZTE F460 langsung tanpa melewati MikroTik jika terjadi kendala jaringan:
+* **Enable Wireless RF:** Centang (Aktif)
+* **SSID Index:** `SSID 1`
+* **SSID Enable:** Centang
+* **SSID Name:** `Admin`
+* **Security & Password:** WPA2-PSK *(Password ditentukan sendiri)*
+
+#### C. Pengkabelan Fisik
+Hubungkan **Kabel UTP** dari port **LAN 1 ZTE F460** menuju port **Ether 1 MikroTik RB941-2nD**.
+
+---
+
+### 2.3 Konfigurasi MikroTik RB941-2nD-TC (hAP lite)
+
+MikroTik difungsikan sebagai **Transparent Bridge Traffic Shaper** (Bridge dengan IP Firewall) untuk mengatur bandwidth manajemen (*Simple Queue*) tanpa melakukan double NAT.
+
+#### 1. Bersihkan Konfigurasi Awal (Factory Reset Tanpa Default)
+Buka Winbox, buka Terminal MikroTik dan jalankan:
+```routeros
+/system reset-configuration no-defaults=yes skip-backup=yes
+```
+
+#### 2. Buat Bridge Transparan & Aktifkan Pemantauan IP Firewall
+```routeros
+/interface bridge add name=bridge-shaper protocol-mode=rstp
+/interface bridge settings set use-ip-firewall=yes allow-fast-path=no
+/ip settings set allow-fast-path=no
+```
+
+#### 3. Konfigurasi Keamanan & Optimasi Radio Wi-Fi Low-Latency (wlan1)
+```routeros
+/interface wireless security-profiles
+set [ find default=yes ] supplicant-identity=MikroTik
+add name=profil-wlan mode=dynamic-keys authentication-types=wpa2-psk \
+    unicast-ciphers=aes-ccm group-ciphers=aes-ccm \
+    wpa2-pre-shared-key="PasswordWifiKamu"
+
+/interface wireless
+set [ find default-name=wlan1 ] band=2ghz-onlyn channel-width=20mhz country=indonesia \
+    disabled=no distance=indoors frequency=auto frequency-mode=regulatory-domain \
+    installation=indoor mode=ap-bridge preamble-mode=short \
+    security-profile=profil-wlan ssid="WiFi-MikroTik" wireless-protocol=802.11 \
+    wmm-support=enabled adaptive-noise-immunity=ap-and-client-mode
+```
+
+#### 4. Masukkan Port Fisik & Wi-Fi ke dalam Bridge
+> **Perhatian:** Port `ether2` yang terhubung ke STB Server diaktifkan (`disabled=no`) dan dimasukkan ke dalam `bridge-shaper` agar STB tergabung dalam jaringan lokal:
+```routeros
+# Aktifkan ether2 untuk koneksi ke STB Server
+/interface ethernet set [find name=ether2] disabled=no
+
+# Masukkan port ke dalam bridge
+/interface bridge port
+add bridge=bridge-shaper interface=ether1 hw=no
+add bridge=bridge-shaper interface=ether2 hw=no
+add bridge=bridge-shaper interface=ether3 hw=no
+add bridge=bridge-shaper interface=ether4 hw=no
+add bridge=bridge-shaper interface=wlan1
+```
+
+#### 5. Konfigurasi IP Remote MikroTik & Gateway
+```routeros
+/ip address add address=192.168.1.2/24 interface=bridge-shaper network=192.168.1.0
+/ip route add distance=1 gateway=192.168.1.1
+/ip dns set servers=192.168.1.1
+```
+
+#### 6. Manajemen Bandwidth (Simple Queue Ringan — Hemat CPU)
+Menggunakan *queue type* `ethernet-default` agar beban CPU MikroTik RB941 tetap rendah dan tidak menyentuh 100%:
+```routeros
+/queue simple add name="Laptop" target=192.168.1.200/32 max-limit=41M/41M
+/queue simple add name="HP" target=192.168.1.201/32 max-limit=41M/41M 
+/queue simple add name="LAN" target=192.168.1.0/24 max-limit=20M/20M
+```
+
+---
+
+### 2.4 Konfigurasi IP Statis STB Server
+
+Hubungkan **Kabel UTP** dari port **Ether 2 MikroTik** ke port **LAN RJ45 STB S905X**.
+
+Konfigurasikan IP Statis pada STB Armbian:
+* **IP Address:** `192.168.1.100`
+* **Netmask:** `255.255.255.0` (`/24`)
+* **Default Gateway:** `192.168.1.1` *(IP ZTE F460)*
+* **DNS Nameserver:** `192.168.1.1`, `1.1.1.1`
+
+**Cara setting via NetworkManager (Terminal SSH STB):**
+```bash
+# Cek nama koneksi ethernet yang aktif (misal: 'Wired connection 1' atau 'eth0')
+nmcli connection show
+
+# Atur IP Statis, Gateway, dan DNS
+nmcli connection modify "Wired connection 1" ipv4.addresses 192.168.1.100/24
+nmcli connection modify "Wired connection 1" ipv4.gateway 192.168.1.1
+nmcli connection modify "Wired connection 1" ipv4.dns "192.168.1.1 1.1.1.1"
+nmcli connection modify "Wired connection 1" ipv4.method manual
+
+# Restart koneksi agar konfigurasi aktif
+nmcli connection up "Wired connection 1"
+```
+
+---
+
+### 2.5 Tabel Alokasi IP Address
+
+| Perangkat | Interface / Koneksi | IP Address | Keterangan / Fungsi |
+| :--- | :--- | :--- | :--- |
+| **ZTE F460** | LAN & Recovery Wi-Fi | `192.168.1.1` | Gateway Utama & PPPoE Client |
+| **MikroTik RB941** | `bridge-shaper` | `192.168.1.2` | IP Remote Winbox & Webfig |
+| **STB S905X** | Port LAN (Ether 2 MikroTik) | `192.168.1.100` | Mini Home Server (Docker & Immich) |
+| **Laptop Client** | Wi-Fi / DHCP | `192.168.1.200` | Limit Bandwidth 41 Mbps Simetris |
+| **Smartphone** | Wi-Fi / DHCP | `192.168.1.201` | Limit Bandwidth 41 Mbps Simetris |
+| **Pool Subnet LAN** | Ether 3, 4 & Client Lain | `192.168.1.0/24` | Limit Bersama 20 Mbps |
