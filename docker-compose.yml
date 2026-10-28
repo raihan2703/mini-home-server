@@ -1,0 +1,122 @@
+services:
+#  adguardhome:
+#    image: adguard/adguardhome
+#    container_name: adguardhome
+#    restart: unless-stopped
+#    volumes:
+#      - ./adguard/work:/opt/adguardhome/work
+#      - ./adguard/conf:/opt/adguardhome/conf
+#    network_mode: host
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token [enter your cloudflare's tunnel here!]
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "1"
+
+  beszel-hub:
+    image: henrygd/beszel:latest
+    container_name: beszel-hub
+    restart: unless-stopped
+    ports:
+      - '8090:8090'
+    volumes:
+      - ./beszel_data:/beszel_data
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "1"
+
+  beszel-agent:
+    image: henrygd/beszel-agent:latest
+    container_name: beszel-agent
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /:/host:ro
+    environment:
+      PORT: 4567
+      KEY: "[masukkan key-nya, jika belum ada tidak apa-apa (kosongkan dengan menghapus kedua tanda petik dua ini serta teks di dalam ini karena key akan digenerate setelah beszel terinstall]]"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "1"
+
+  immich-server:
+    container_name: immich_server
+    image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-release}
+    volumes:
+      - ${UPLOAD_LOCATION}:/usr/src/app/upload
+      - /etc/localtime:/etc/localtime:ro
+    env_file:
+      - .env
+    ports:
+      - 2283:2283
+    environment:
+      IMMICH_MACHINE_LEARNING_URL: ""
+    depends_on:
+      - immich_redis
+      - immich_postgres
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "1"
+
+  immich_redis:
+    container_name: immich_redis
+    image: valkey/valkey:8
+    healthcheck:
+      test: valkey-cli ping || exit 1
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "1"
+
+  immich_postgres:
+    container_name: immich_postgres
+    image: pgvector/pgvector:pg14
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_DB: ${DB_DATABASE_NAME}
+      POSTGRES_INITDB_ARGS: '--data-checksums'
+    volumes:
+      - ${DB_DATA_LOCATION}:/var/lib/postgresql/data
+    healthcheck:
+      test: pg_isready --dbname="${DB_DATABASE_NAME}" --username="${DB_USERNAME}" || exit 127
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "1"
+
+  watchtower:
+    container_name: watchtower
+    image: containrrr/watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_CLEANUP=true # Menghapus image lama setelah update agar disk tidak penuh
+      - WATCHTOWER_POLL_INTERVAL=86400 # Cek update setiap 24 jam (86400 detik)
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "1"
